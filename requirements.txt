@@ -1,0 +1,5 @@
+google-genai
+playwright
+requests
+gspread
+google-auth

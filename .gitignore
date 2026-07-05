@@ -1,0 +1,4 @@
+.env
+google_creds.json
+.envrc
+__pycache__/
