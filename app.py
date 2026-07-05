@@ -2,6 +2,7 @@ import os
 import traceback
 import requests
 import gspread
+import json
 from google import genai
 from playwright.sync_api import sync_playwright, Playwright
 from dotenv import load_dotenv
@@ -49,8 +50,19 @@ def pnl_aggregator_hub():
     total_cost = 0.0
     
     creds_path = "google_creds.json"
+    
+    # Reconstruct the credentials file from Render environment variable if missing locally
     if not os.path.exists(creds_path):
-        raise FileNotFoundError(f"Missing absolute dependency: '{creds_path}' not found in runtime workspace.")
+        env_creds = os.getenv("GOOGLE_CREDS_JSON")
+        if env_creds:
+            try:
+                with open(creds_path, "w") as f:
+                    json.dump(json.loads(env_creds), f)
+                print("Successfully generated google_creds.json from environment workspace variable.")
+            except Exception as e:
+                raise ValueError(f"Failed to parse cloud GOOGLE_CREDS_JSON variable: {e}")
+        else:
+            raise FileNotFoundError(f"Missing absolute dependency: '{creds_path}' not found locally or in cloud environment variables.")
 
     # Authenticate service account connection
     gc = gspread.service_account(filename=creds_path)
@@ -79,7 +91,6 @@ def pnl_aggregator_hub():
             if isinstance(row, dict):
                 val = row.get("total_revenue") if row.get("total_revenue") is not None else row.get("total")
                 total_revenue += safe_float(val)
-                # Extract and add the platform-specific internal costs
                 total_cost += safe_float(row.get("built_in_costs"))
     except gspread.exceptions.WorksheetNotFound:
         print("Warning: 'tiktok_revenue' worksheet absent. Calculation fallback executed.")
